@@ -5,7 +5,7 @@ set -e
 # Config variables.
 # See e.g. https://nodejs.org/dist/v8.10.0/SHASUMS256.txt for checksum.
 NODE_VERSION=8.11.3
-NODE_SHA256=08e2fcfea66746bd966ea3a89f26851f1238d96f86c33eaf6274f67fce58421a
+NODE_SHA256=7eac0bf398cb6ecf9f84dfc577ee84eee3d930f7a54b7e50f56d1a358b528792
 
 cd $(dirname $0)
 cd ../..
@@ -26,12 +26,12 @@ verify_checksum () {
   local FILE=$1
   local EXPECTED_CHECKSUM=$2
 
-  local ACTUAL_CHECKSUM=$(sha256sum "$FILE")
+  local ACTUAL_CHECKSUM=$(shasum -a256 "$FILE")
   [[ "$EXPECTED_CHECKSUM  $FILE" != "$ACTUAL_CHECKSUM" ]]
 }
 
 download_node () {
-  local NODE_FILENAME="node-v${NODE_VERSION}-linux-x64.tar.xz"
+  local NODE_FILENAME="node-v${NODE_VERSION}-darwin-x64.tar.xz"
   local NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_FILENAME}"
   local NODE_ARCHIVE_DEST="/tmp/${NODE_FILENAME}"
   echo "Downloading Node v${NODE_VERSION} from ${NODE_URL}"

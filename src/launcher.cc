@@ -22,6 +22,9 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#ifdef __APPLE__
+#include <libproc.h>
+#endif
 
 #include "launcher.h"
 
@@ -31,7 +34,7 @@
 int findBaseDir(std::string* shinyServerPath);
 
 int main(int argc, char **argv) {
-
+  
   // If the caller requested daemonizing, do it.
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--daemonize") == 0) {
@@ -39,16 +42,16 @@ int main(int argc, char **argv) {
       break;
     }
   }
-
-
+  
+  
   std::string shinyServerPath;
   int result = findBaseDir(&shinyServerPath);
   if (result != 0)
     return result;
-
+  
   std::string nodePath = shinyServerPath + "/ext/node/bin/shiny-server";
   std::string mainPath = shinyServerPath + "/lib/main.js";
-
+  
   // Two extra args: one for mainPath, one for NULL terminator
   char** newargs = new char*[argc + 2];
   newargs[0] = strdup(nodePath.c_str());
@@ -57,28 +60,36 @@ int main(int argc, char **argv) {
     newargs[i + 2] = argv[i + 1];
   }
   newargs[argc + 1] = NULL;
-
+  
   execv(nodePath.c_str(), newargs);
- 
+  
   // This will actually never get called.
   free(newargs[0]);
   free(newargs[1]);
   delete newargs;
-
+  
   return 0;
 }
 
 // Determines the base dir of the shiny-server instance that's being invoked,
 // by calling readlink on /proc/<pid>/exe.
 int findBaseDir(std::string* shinyServerPath) {
-
+  
+#ifdef __APPLE__
+  char execPath[PROC_PIDPATHINFO_MAXSIZE];
+  if (!proc_pidpath(getpid(), execPath, sizeof(execPath))) {
+    perror("proc_pidpath");
+    // unexpected error
+    return 2;
+  }
+#else // assuming Linux
   char execPath[MAXPATHLEN + 1];
   int cn = snprintf(execPath, MAXPATHLEN + 1, "/proc/%d/exe", getpid());
   if (cn < 0 || cn > MAXPATHLEN) {
     // Not expected
     return 2;
   }
-
+  
   struct stat execStat;
   if (lstat(execPath, &execStat)) {
     if (errno == ENOENT)
@@ -87,18 +98,18 @@ int findBaseDir(std::string* shinyServerPath) {
       fprintf(stderr, "Fatal error calling lstat: %d\n", errno);
     return 1;
   }
-
+  
   if (!S_ISLNK(execStat.st_mode)) {
     fprintf(stderr, "/proc/%d/exe was not a symlink\n", getpid());
     return 1;
   }
-
+  
   if (execStat.st_size > MAXPATHLEN) {
     fprintf(stderr, "Link resolved to an unexpectedly long path\n");
     return 1;
   }
   ssize_t charsNeeded = execStat.st_size > 0 ? execStat.st_size : MAXPATHLEN;
-
+  
   std::vector<char> execBuf(charsNeeded + 1, 0);
   ssize_t cb = readlink(execPath, &execBuf[0], execBuf.size());
   if (cb < 0) {
@@ -107,8 +118,8 @@ int findBaseDir(std::string* shinyServerPath) {
   }
   std::copy(execBuf.begin(), execBuf.begin() + cb, execPath);
   execPath[cb] = '\0';
-
+#endif
   *shinyServerPath = dirname(dirname(execPath));
-
+  
   return 0;
 }

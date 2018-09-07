@@ -1,4 +1,4 @@
-# Shiny Server
+# Shiny Server Adapted for Installing on MacOS
 
 Shiny Server is a server program that makes [Shiny](https://rstudio.com/shiny) applications available over the web.
 
@@ -10,15 +10,72 @@ Shiny Server is a server program that makes [Shiny](https://rstudio.com/shiny) a
 * Free and open source ([AGPLv3](http://www.gnu.org/licenses/agpl-3.0.html) license)
 * Pre-built installers for select Linux distributions.
 
-## Installing
+## Installing and Post-Install
 
-At this time, Shiny Server can be run on Linux servers with explicit support for Ubuntu 12.04 or greater (64 bit) and CentOS/RHEL 5 (64 bit) or greater. If you are using one of these distributions, please download the pre-packaged installers from RStudio:
+Suppose you have fulfilled the prerequisites specified by [instructions for building from source](https://github.com/rstudio/shiny-server/wiki/Building-Shiny-Server-from-Source). By running the following instructions, you are able to install shiny-server on macOS Sierra (10.12.6).
 
-> [Download Shiny Server Installers](https://www.rstudio.com/products/shiny/shiny-server/). 
+### Installing
+<pre><code>
+git clone https://github.com/YaofeiXiong/shiny-server.git
 
-These installers will provide a majority of the prerequisite software and will provision all the necessary directories for you.
+cd shiny-server
+mkdir tmp
+cd tmp
 
-If you are not using one of the explicitly supported distributions, you can still use Shiny Server by building it from source, see the [instructions for building from source](https://github.com/rstudio/shiny-server/wiki/Building-Shiny-Server-from-Source).
+DIR=`pwd`
+PATH=$DIR/../bin:$PATH
+
+PYTHON=`which python`
+
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DPYTHON="$PYTHON" ../
+
+make
+mkdir ../build
+
+(cd .. && ./external/node/install-node.sh)
+(cd .. && ./bin/npm --python="$PYTHON" install)
+(cd .. && ./bin/node ./ext/node/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js --python="$PYTHON" rebuild)
+
+sudo make install
+</code></pre>
+
+### Post-Install
+
+Add user ```shiny``` through the GUI (System Preferences -> Users & Groups) of macOS. 
+
+<pre><code>
+sudo mkdir -p /var/log/shiny-server
+sudo mkdir -p /srv/shiny-server
+sudo mkdir -p /var/lib/shiny-server/bookmarks
+sudo mkdir -p /etc/shiny-server
+
+sudo chown shiny /var/log/shiny-server/
+sudo chown shiny /var/lib/shiny-server/bookmarks/
+
+sudo /usr/local/shiny-server/bin/deploy-example
+</code></pre>
+
+### Start Shiny Server
+
+<pre><code>
+su shiny
+
+shiny-server
+</code></pre>
+
+### Please Note
+
+There is still something wrong with the ```pandoc```. But you can run your shiny apps, which are not related to ```pandoc``` as usual. 
+
+### References:
+
+> [A comment in an issue of Shiny-server repo on Github](https://github.com/rstudio/shiny-server/issues/347#issuecomment-403243615).
+
+> [Instructions for building from source](https://github.com/rstudio/shiny-server/wiki/Building-Shiny-Server-from-Source).
+
+> [A manual by Nic Ducheneaut](http://www.ducheneaut.info/installing-shiny-server-on-mac-os-x/).
+
+
 
 ## Configuration
 
